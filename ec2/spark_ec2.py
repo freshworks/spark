@@ -99,6 +99,8 @@ def parse_args():
       help="Disable Ganglia monitoring for the cluster")
   parser.add_option("-u", "--user", default="root",
       help="The SSH user you want to connect as (default: root)")
+  parser.add_option("--assume-yes", action="store_true", dest="assume_yes", default=False,
+      help="Assume the answer to all questions is yes (for non-interactive use)"),
   parser.add_option("--delete-groups", action="store_true", default=False,
       help="When destroying a cluster, delete the security groups that were created")
   parser.add_option("--use-existing-master", action="store_true", default=False,
@@ -664,6 +666,12 @@ def get_partition(total, num_partitions, current_partitions):
     num_slaves_this_zone += 1
   return num_slaves_this_zone
 
+# If opts.assume_yes is true, automatically returns "y", otherwise gets input from user.
+def get_answer(opts, question):
+  if opts.assume_yes:
+    return "y"
+  else:
+    return raw_input(question)
 
 def real_main():
   (opts, action, cluster_name) = parse_args()
@@ -691,7 +699,7 @@ def real_main():
     setup_cluster(conn, master_nodes, slave_nodes, opts, True)
 
   elif action == "destroy":
-    response = raw_input("Are you sure you want to destroy the cluster " +
+    response = get_answer(opts, "Are you sure you want to destroy the cluster " +
         cluster_name + "?\nALL DATA ON ALL NODES WILL BE LOST!!\n" +
         "Destroy cluster " + cluster_name + " (y/N): ")
     if response == "y":
@@ -762,7 +770,7 @@ def real_main():
     print master_nodes[0].public_dns_name
 
   elif action == "stop":
-    response = raw_input("Are you sure you want to stop the cluster " +
+    response = get_answer(opts, "Are you sure you want to stop the cluster " +
         cluster_name + "?\nDATA ON EPHEMERAL DISKS WILL BE LOST, " +
         "BUT THE CLUSTER WILL KEEP USING SPACE ON\n" +
         "AMAZON EBS IF IT IS EBS-BACKED!!\n" +
