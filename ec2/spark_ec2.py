@@ -99,6 +99,8 @@ def parse_args():
       help="Disable Ganglia monitoring for the cluster")
   parser.add_option("-u", "--user", default="root",
       help="The SSH user you want to connect as (default: root)")
+  parser.add_option("--num-ssh-tries", metavar="TRIES", type="int", default=2,
+      help="Number of times to try ssh operations (default: 2)")
   parser.add_option("--delete-groups", action="store_true", default=False,
       help="When destroying a cluster, delete the security groups that were created")
   parser.add_option("--use-existing-master", action="store_true", default=False,
@@ -613,7 +615,7 @@ def ssh(host, opts, command):
       return subprocess.check_call(
         ssh_command(opts) + ['-t', '-t', '%s@%s' % (opts.user, host), stringify_command(command)])
     except subprocess.CalledProcessError as e:
-      if (tries > 2):
+      if (tries > opts.num_ssh_tries):
         # If this was an ssh failure, provide the user with hints.
         if e.returncode == 255:
           raise UsageError("Failed to SSH to remote host {0}.\nPlease check that you have provided the correct --identity-file and --key-pair parameters and try again.".format(host))
@@ -640,7 +642,7 @@ def ssh_write(host, opts, command, input):
     status = proc.wait()
     if status == 0:
       break
-    elif (tries > 2):
+    elif (tries > opts.num_ssh_tries):
       raise RuntimeError("ssh_write failed with error %s" % proc.returncode)
     else:
       print >> stderr, "Error {0} while executing remote command, retrying after 30 seconds".format(status)
