@@ -99,6 +99,8 @@ def parse_args():
       help="Disable Ganglia monitoring for the cluster")
   parser.add_option("-u", "--user", default="root",
       help="The SSH user you want to connect as (default: root)")
+  parser.add_option("--num-ssh-tries", metavar="TRIES", type="int", default=2,
+      help="Number of times to try ssh operations (default: 2)")
   parser.add_option("--assume-yes", action="store_true", dest="assume_yes", default=False,
       help="Assume the answer to all questions is yes (for non-interactive use)"),
   parser.add_option("--delete-groups", action="store_true", default=False,
@@ -234,24 +236,24 @@ def launch_cluster(conn, opts, cluster_name):
   if master_group.rules == []: # Group was just now created
     master_group.authorize(src_group=master_group)
     master_group.authorize(src_group=slave_group)
-    master_group.authorize('tcp', 22, 22, opts.ips_allowed)
-    master_group.authorize('tcp', 8080, 8081, opts.ips_allowed)
-    master_group.authorize('tcp', 19999, 19999, opts.ips_allowed)
-    master_group.authorize('tcp', 50030, 50030, opts.ips_allowed)
-    master_group.authorize('tcp', 50070, 50070, opts.ips_allowed)
-    master_group.authorize('tcp', 60070, 60070, opts.ips_allowed)
-    master_group.authorize('tcp', 4040, 4045, opts.ips_allowed)
+    master_group.authorize('tcp', 22, 22, '0.0.0.0/0')
+    master_group.authorize('tcp', 8080, 8081, '0.0.0.0/0')
+    master_group.authorize('tcp', 19999, 19999, '0.0.0.0/0')
+    master_group.authorize('tcp', 50030, 50030, '0.0.0.0/0')
+    master_group.authorize('tcp', 50070, 50070, '0.0.0.0/0')
+    master_group.authorize('tcp', 60070, 60070, '0.0.0.0/0')
+    master_group.authorize('tcp', 4040, 4045, '0.0.0.0/0')
     if opts.ganglia:
-      master_group.authorize('tcp', 5080, 5080, opts.ips_allowed)
+      master_group.authorize('tcp', 5080, 5080, '0.0.0.0/0')
   if slave_group.rules == []: # Group was just now created
     slave_group.authorize(src_group=master_group)
     slave_group.authorize(src_group=slave_group)
-    slave_group.authorize('tcp', 22, 22, opts.ips_allowed)
-    slave_group.authorize('tcp', 8080, 8081, opts.ips_allowed)
-    slave_group.authorize('tcp', 50060, 50060, opts.ips_allowed)
-    slave_group.authorize('tcp', 50075, 50075, opts.ips_allowed)
-    slave_group.authorize('tcp', 60060, 60060, opts.ips_allowed)
-    slave_group.authorize('tcp', 60075, 60075, opts.ips_allowed)
+    slave_group.authorize('tcp', 22, 22, '0.0.0.0/0')
+    slave_group.authorize('tcp', 8080, 8081, '0.0.0.0/0')
+    slave_group.authorize('tcp', 50060, 50060, '0.0.0.0/0')
+    slave_group.authorize('tcp', 50075, 50075, '0.0.0.0/0')
+    slave_group.authorize('tcp', 60060, 60060, '0.0.0.0/0')
+    slave_group.authorize('tcp', 60075, 60075, '0.0.0.0/0')
 
   # Check if instances are already running in our groups
   existing_masters, existing_slaves = get_existing_cluster(conn, opts, cluster_name,
@@ -668,12 +670,6 @@ def get_partition(total, num_partitions, current_partitions):
     num_slaves_this_zone += 1
   return num_slaves_this_zone
 
-# If opts.assume_yes is true, automatically returns "y", otherwise gets input from user.
-def get_answer(opts, question):
-  if opts.assume_yes:
-    return "y"
-  else:
-    return raw_input(question)
 
 def real_main():
   (opts, action, cluster_name) = parse_args()
@@ -701,7 +697,7 @@ def real_main():
     setup_cluster(conn, master_nodes, slave_nodes, opts, True)
 
   elif action == "destroy":
-    response = get_answer(opts, "Are you sure you want to destroy the cluster " +
+    response = raw_input("Are you sure you want to destroy the cluster " +
         cluster_name + "?\nALL DATA ON ALL NODES WILL BE LOST!!\n" +
         "Destroy cluster " + cluster_name + " (y/N): ")
     if response == "y":
@@ -772,7 +768,7 @@ def real_main():
     print master_nodes[0].public_dns_name
 
   elif action == "stop":
-    response = get_answer(opts, "Are you sure you want to stop the cluster " +
+    response = raw_input("Are you sure you want to stop the cluster " +
         cluster_name + "?\nDATA ON EPHEMERAL DISKS WILL BE LOST, " +
         "BUT THE CLUSTER WILL KEEP USING SPACE ON\n" +
         "AMAZON EBS IF IT IS EBS-BACKED!!\n" +
