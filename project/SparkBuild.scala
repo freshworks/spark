@@ -329,6 +329,8 @@ object SparkBuild extends Build {
   def coreSettings = sharedSettings ++ Seq(
     name := "spark-core",
     libraryDependencies ++= Seq(
+        "org.apache.httpcomponents"  % "httpcore"         % "4.2",
+        "org.apache.httpcomponents"  % "httpclient"       % "4.2",
         "com.google.guava"           % "guava"            % "14.0.1",
         "org.apache.commons"         % "commons-lang3"    % "3.3.2",
         "com.google.code.findbugs"   % "jsr305"           % "1.3.9",
