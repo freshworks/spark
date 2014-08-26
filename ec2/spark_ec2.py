@@ -70,7 +70,7 @@ def parse_args():
            "slaves across multiple (an additional $0.01/Gb for bandwidth" +
            "between zones applies)")
   parser.add_option("-a", "--ami", help="Amazon Machine Image ID to use")
-  parser.add_option("-v", "--spark-version", default="1.0.0",
+  parser.add_option("-v", "--spark-version", default="1.0.1",
       help="Version of Spark to use: 'X.Y.Z' or a specific git hash")
   parser.add_option("--spark-git-repo",
       default="https://github.com/apache/spark",
@@ -170,7 +170,7 @@ def is_active(instance):
 # Return correct versions of Spark and Shark, given the supplied Spark version
 def get_spark_shark_version(opts):
   spark_shark_map = {"0.7.3": "0.7.1", "0.8.0": "0.8.0", "0.8.1": "0.8.1", "0.9.0": "0.9.0", 
-    "0.9.1": "0.9.1", "1.0.0": "1.0.0"}
+    "0.9.1": "0.9.1", "1.0.0": "1.0.0", "1.0.1": "1.0.0", "1.0.2": "1.0.0"}
   version = opts.spark_version.replace("v", "")
   if version not in spark_shark_map:
     print >> stderr, "Don't know about Spark version: %s" % version
@@ -216,7 +216,10 @@ def get_spark_ami(opts):
     "r3.xlarge":   "hvm",
     "r3.2xlarge":  "hvm",
     "r3.4xlarge":  "hvm",
-    "r3.8xlarge":  "hvm"
+    "r3.8xlarge":  "hvm",
+    "t2.micro":    "hvm",
+    "t2.small":    "hvm",
+    "t2.medium":   "hvm"
   }
   if opts.instance_type in instance_types:
     instance_type = instance_types[opts.instance_type]
@@ -254,6 +257,7 @@ def launch_cluster(conn, opts, cluster_name):
     master_group.authorize(src_group=slave_group)
     master_group.authorize('tcp', 22, 22, opts.ips_allowed)
     master_group.authorize('tcp', 8080, 8081, opts.ips_allowed)
+    master_group.authorize('tcp', 18080, 18081, opts.ips_allowed)
     master_group.authorize('tcp', 19999, 19999, opts.ips_allowed)
     master_group.authorize('tcp', 50030, 50030, opts.ips_allowed)
     master_group.authorize('tcp', 50070, 50070, opts.ips_allowed)
@@ -657,9 +661,23 @@ def ssh(host, opts, command):
       time.sleep(30)
       tries = tries + 1
 
+# Backported from Python 2.7 for compatiblity with 2.6 (See SPARK-1990)
+def _check_output(*popenargs, **kwargs):
+    if 'stdout' in kwargs:
+        raise ValueError('stdout argument not allowed, it will be overridden.')
+    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+    output, unused_err = process.communicate()
+    retcode = process.poll()
+    if retcode:
+        cmd = kwargs.get("args")
+        if cmd is None:
+            cmd = popenargs[0]
+        raise subprocess.CalledProcessError(retcode, cmd, output=output)
+    return output
+
 
 def ssh_read(host, opts, command):
-  return subprocess.check_output(
+  return _check_output(
       ssh_command(opts) + ['%s@%s' % (opts.user, host), stringify_command(command)])
 
 
