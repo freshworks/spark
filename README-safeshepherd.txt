@@ -1,5 +1,10 @@
 This is how I upgraded the Safeshepherd build of Spark from Spark 1.0.0 to Spark 1.0.2.
 
+The 2 key files for Safeshpherd are:
+a. pom.xml: Specify the desired versions of httpcore and httpclient from org.apache.httpcomponents. (4.2)
+b. ec2/spark_ec2.py - has my customizations to allow automated use with other conveniences.
+
+
 -- when moving up to a new spark version, I highly recommend checking out a new copy of whenceforth/spark rather than working in the existing local copy.
 This makes it much easier to throw things out if something goes wrong.
 
